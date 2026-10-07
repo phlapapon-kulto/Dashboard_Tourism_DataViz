@@ -328,24 +328,60 @@ from src.analytics.intelligence import (
     generate_smart_recommendations,
     perform_province_clustering
 )
-from src.components.charts import (
-    create_monthly_trend_chart,
-    create_top_provinces_chart,
-    create_thailand_map,
-    create_seasonality_chart,
-    create_visitor_share_donut,
-    create_volume_vs_yield_scatter,
-    create_occupancy_bar_chart,
-    create_opportunity_matrix_chart,
-    create_anomaly_chart,
-    create_cluster_scatter,
-    CHART_SOURCES
-)
+# Robust Source Catalog fallback
+DEFAULT_CHART_SOURCES = {
+    "monthly_trend_tourists": "กองเศรษฐกิจการท่องเที่ยวและกีฬา กระทรวงการท่องเที่ยวและกีฬา (MOTS) | Dataset: fact_tourism_monthly",
+    "monthly_trend_revenue": "กองเศรษฐกิจการท่องเที่ยวและกีฬา กระทรวงการท่องเที่ยวและกีฬา (MOTS) | Dataset: fact_tourism_monthly",
+    "visitor_share": "กองเศรษฐกิจการท่องเที่ยวและกีฬา กระทรวงการท่องเที่ยวและกีฬา (MOTS) & สำนักงานสถิติแห่งชาติ (NSO)",
+    "top_provinces": "กระทรวงการท่องเที่ยวและกีฬา (MOTS) & การท่องเที่ยวแห่งประเทศไทย (TAT Data Portal)",
+    "thailand_map": "กระทรวงการท่องเที่ยวและกีฬา (MOTS) & สำนักงานสถิติแห่งชาติ (NSO)",
+    "seasonality": "กองเศรษฐกิจการท่องเที่ยวและกีฬา กระทรวงการท่องเที่ยวและกีฬา (MOTS) สถิติสะสมรายเดือน",
+    "volume_vs_yield": "กระทรวงการท่องเที่ยวและกีฬา (MOTS) & สำนักงานสภาพัฒนาการเศรษฐกิจและสังคมแห่งชาติ (NESDC GPP)",
+    "occupancy_rate": "การท่องเที่ยวแห่งประเทศไทย (TAT Data Catalog: สถิติจำนวนห้องพักและอัตราการเข้าพัก)",
+    "dependency_table": "สำนักงานสภาพัฒนาการเศรษฐกิจและสังคมแห่งชาติ (NESDC Provincial GPP) & กระทรวงการท่องเที่ยวและกีฬา (MOTS)",
+    "opportunity_matrix": "การคำนวณ Yield และ YoY Growth จากฐานข้อมูล MOTS & NESDC (Star Schema Engine)",
+    "anomaly_detection": "สถิติผู้เยี่ยมเยือนรายเดือน MOTS (วิเคราะห์ด้วยแบบจำลอง Rolling Bollinger Bands ±2σ)",
+    "clustering": "การจัดกลุ่ม 77 จังหวัดด้วยแบบจำลอง K-Means โดยประมวลผลข้อมูลร่วม MOTS, NESDC และ TAT"
+}
+
+try:
+    import src.components.charts as charts_module
+    import importlib
+    # Ensure hot-reloaded Streamlit process loads the latest charts module
+    importlib.reload(charts_module)
+    from src.components.charts import (
+        create_monthly_trend_chart,
+        create_top_provinces_chart,
+        create_thailand_map,
+        create_seasonality_chart,
+        create_visitor_share_donut,
+        create_volume_vs_yield_scatter,
+        create_occupancy_bar_chart,
+        create_opportunity_matrix_chart,
+        create_anomaly_chart,
+        create_cluster_scatter
+    )
+    CHART_SOURCES = getattr(charts_module, "CHART_SOURCES", DEFAULT_CHART_SOURCES)
+except Exception:
+    from src.components.charts import (
+        create_monthly_trend_chart,
+        create_top_provinces_chart,
+        create_thailand_map,
+        create_seasonality_chart,
+        create_visitor_share_donut,
+        create_volume_vs_yield_scatter,
+        create_occupancy_bar_chart,
+        create_opportunity_matrix_chart,
+        create_anomaly_chart,
+        create_cluster_scatter
+    )
+    CHART_SOURCES = DEFAULT_CHART_SOURCES
+
 from src.components.recommendations import get_top5_recommended_provinces
 
 # Helper function to render Source caption under every chart
 def render_source(source_key: str):
-    source_text = CHART_SOURCES.get(source_key, "กระทรวงการท่องเที่ยวและกีฬา (MOTS) & สำนักงานสภาพัฒนาการเศรษฐกิจและสังคมแห่งชาติ (NESDC)")
+    source_text = CHART_SOURCES.get(source_key, DEFAULT_CHART_SOURCES.get(source_key, "กระทรวงการท่องเที่ยวและกีฬา (MOTS)"))
     st.markdown(f'<div class="chart-source"><b>Source:</b> {source_text}</div>', unsafe_allow_html=True)
 
 @st.cache_data
