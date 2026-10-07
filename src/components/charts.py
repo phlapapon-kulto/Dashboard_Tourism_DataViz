@@ -48,6 +48,32 @@ CHART_SOURCES: Dict[str, str] = {
     "clustering": "การจัดกลุ่ม 77 จังหวัดด้วยแบบจำลอง K-Means โดยประมวลผลข้อมูลร่วม MOTS, NESDC และ TAT"
 }
 
+
+import functools
+
+def _finalize(fig: go.Figure, title: str, bottom: int = 96) -> go.Figure:
+    """Uniform, overlap-safe layout: short bold title (top-left), legend BELOW the plot, fixed margins."""
+    fig.update_layout(
+        title=dict(text=f"<b>{title}</b>", x=0, xanchor="left", y=0.98, yanchor="top",
+                   font=dict(size=20, color=COLOR_DARK)),
+        margin=dict(l=24, r=24, t=72, b=bottom),
+        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="left", x=0,
+                    title=dict(text=""), font=dict(size=11)),
+        autosize=True,
+    )
+    fig.update_xaxes(automargin=True, title_standoff=10)
+    fig.update_yaxes(automargin=True, title_standoff=10)
+    return fig
+
+def _chart(title: str, bottom: int = 96):
+    def deco(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            return _finalize(fn(*args, **kwargs), title, bottom)
+        return wrapper
+    return deco
+
+@_chart("แนวโน้มรายเดือน", 96)
 def create_monthly_trend_chart(df: pd.DataFrame, metric: str = "total_tourists") -> go.Figure:
     """
     Monthly Trend Chart showing YoY multi-year comparison line chart.
@@ -119,6 +145,7 @@ def create_monthly_trend_chart(df: pd.DataFrame, metric: str = "total_tourists")
     )
     return fig
 
+@_chart("จังหวัดอันดับสูงสุด", 60)
 def create_top_provinces_chart(df: pd.DataFrame, top_n: int = 10, metric: str = "total_tourists") -> go.Figure:
     """
     Top Provinces Ranking Horizontal Bar Chart.
@@ -166,6 +193,7 @@ def create_top_provinces_chart(df: pd.DataFrame, top_n: int = 10, metric: str = 
     )
     return fig
 
+@_chart("แผนที่รายจังหวัด", 80)
 def create_thailand_map(df: pd.DataFrame, metric: str = "total_tourists") -> go.Figure:
     """
     Interactive Geospatial Map of Thailand's 77 provinces with proportional bubble markers.
@@ -251,11 +279,12 @@ def create_thailand_map(df: pd.DataFrame, metric: str = "total_tourists") -> go.
         coloraxis_colorbar=dict(
             title=dict(text=f"{metric_name} ({unit})", font=dict(size=11)),
             orientation="h",
-            y=-0.05
+            y=-0.08, yanchor="top", thickness=12, len=0.6
         )
     )
     return fig
 
+@_chart("ฤดูกาลท่องเที่ยว", 96)
 def create_seasonality_chart(df: pd.DataFrame) -> go.Figure:
     """
     Seasonality Chart analyzing Peak, Shoulder, and Low seasons.
@@ -311,6 +340,7 @@ def create_seasonality_chart(df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
+@_chart("สัดส่วนผู้เยี่ยมเยือน", 80)
 def create_visitor_share_donut(df: pd.DataFrame) -> go.Figure:
     """
     Donut chart of Thai Domestic vs Foreign International share.
@@ -342,6 +372,7 @@ def create_visitor_share_donut(df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
+@_chart("ปริมาณ vs รายได้", 100)
 def create_volume_vs_yield_scatter(df: pd.DataFrame) -> go.Figure:
     """
     Visitors vs. Revenue (High Volume vs High Yield) Scatter Plot.
@@ -387,6 +418,7 @@ def create_volume_vs_yield_scatter(df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
+@_chart("อัตราเข้าพักรายภาค", 80)
 def create_occupancy_bar_chart(df: pd.DataFrame) -> go.Figure:
     """
     Accommodation Occupancy Rate by Region vs National Benchmark.
@@ -435,70 +467,77 @@ def create_occupancy_bar_chart(df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
+@_chart("เมทริกซ์ 4 ควอแดรนท์", 110)
 def create_opportunity_matrix_chart(matrix_df: pd.DataFrame, median_yield: float, median_growth: float) -> go.Figure:
-    """
-    Four-Quadrant Opportunity Matrix (Yield vs Growth).
-    Stars = Coral (#FF7F50), Mature = Teal (#0F766E), Gems = Amber (#D97706), Repositioning = Slate (#64748B).
-    """
-    color_map = {
-        "Star: High Yield & High Growth (ดาวเด่นมูลค่าสูง)": COLOR_CORAL,
-        "Mature Asset: High Yield Stable (แหล่งสร้างรายได้หลัก)": COLOR_TEAL,
-        "Hidden Gem: High Growth Potential (เพชรเม็ดงามน่าจับตา)": "#D97706",
-        "Repositioning: Underperforming (ต้องยกระดับกลยุทธ์)": "#94A3B8",
+    """Four-quadrant matrix: X = Yield (baht/visitor), Y = revenue YoY growth (%), size = total revenue."""
+    short = {
+        "Star": ("ดาวเด่น", COLOR_CORAL),
+        "Mature": ("รายได้หลัก", COLOR_TEAL),
+        "Hidden": ("เพชรเม็ดงาม", "#D97706"),
+        "Repositioning": ("ต้องยกระดับ", "#94A3B8"),
     }
+    def _key(q: str) -> str:
+        return next((k for k in short if str(q).startswith(k)), "Repositioning")
+
+    df = matrix_df.copy()
+    df["quadrant_short"] = df["quadrant"].map(lambda q: short[_key(q)][0])
+    cmap = {v[0]: v[1] for v in short.values()}
 
     fig = px.scatter(
-        matrix_df,
-        x="revenue_per_visitor",
-        y="revenue_yoy_growth",
-        color="quadrant",
-        color_discrete_map=color_map,
-        size="total_revenue",
+        df, x="revenue_per_visitor", y="revenue_yoy_growth", color="quadrant_short",
+        color_discrete_map=cmap, size="total_revenue", size_max=34, opacity=0.8,
         hover_name="province_name_th",
-        hover_data={
-            "province_name_en": True,
-            "region": True,
-            "revenue_per_visitor": ":,.0f บาท/คน",
-            "revenue_yoy_growth": ":.1f%",
-            "total_tourists": ":,.0f คน",
-            "total_revenue": ":,.1f ล้านบาท"
-        },
-        title="<b>เมทริกซ์วิเคราะห์โอกาสเชิงยุทธศาสตร์ 4 ควอแดรนท์ (Opportunity Matrix)</b><br><span style='font-size:12px; color:#64748B;'>แกน X: Yield (บาท/คน) | แกน Y: อัตราการเติบโต YoY (%) | ขนาด = รายได้รวม</span>",
-        labels={
-            "revenue_per_visitor": "รายได้เฉลี่ยต่อผู้เยี่ยมเยือน (บาท/คน)",
-            "revenue_yoy_growth": "อัตราการเติบโตของรายได้ YoY (%)",
-            "quadrant": "กลุ่มยุทธศาสตร์ (Quadrant)"
-        }
+        hover_data={"province_name_en": True, "region": True, "quadrant_short": False,
+                    "revenue_per_visitor": ":,.0f", "revenue_yoy_growth": ":.1f",
+                    "total_tourists": ":,.0f", "total_revenue": ":,.1f"},
+        labels={"revenue_per_visitor": "Yield (บาท/คน)", "revenue_yoy_growth": "การเติบโตรายได้ YoY (%)",
+                "quadrant_short": "กลุ่ม"},
     )
 
-    # Reference lines (Medians)
+    xmin, xmax = df["revenue_per_visitor"].min(), df["revenue_per_visitor"].max()
+    ymin, ymax = df["revenue_yoy_growth"].min(), df["revenue_yoy_growth"].max()
+    xpad, ypad = (xmax - xmin) * 0.08 or 1, (ymax - ymin) * 0.12 or 1
+    x0, x1, y0, y1 = max(0, xmin - xpad), xmax + xpad, ymin - ypad, ymax + ypad
+
+    # Quadrant shading (below data) split at the medians
+    for (xa, xb, ya, yb, col) in [
+        (median_yield, x1, median_growth, y1, "rgba(255,127,80,0.07)"),
+        (x0, median_yield, median_growth, y1, "rgba(217,119,6,0.07)"),
+        (median_yield, x1, y0, median_growth, "rgba(15,118,110,0.07)"),
+        (x0, median_yield, y0, median_growth, "rgba(148,163,184,0.10)"),
+    ]:
+        fig.add_shape(type="rect", x0=xa, x1=xb, y0=ya, y1=yb, fillcolor=col, line_width=0, layer="below")
     fig.add_vline(x=median_yield, line_width=1.5, line_dash="dash", line_color="#94A3B8")
     fig.add_hline(y=median_growth, line_width=1.5, line_dash="dash", line_color="#94A3B8")
 
-    # Annotations
-    fig.add_annotation(
-        x=matrix_df["revenue_per_visitor"].max() * 0.88,
-        y=matrix_df["revenue_yoy_growth"].max() * 0.88,
-        text="<b>⭐ STARS</b><br>High Yield & High Growth",
-        showarrow=False,
-        font=dict(color=COLOR_CORAL, size=11)
-    )
-    fig.add_annotation(
-        x=matrix_df["revenue_per_visitor"].min() * 1.15,
-        y=matrix_df["revenue_yoy_growth"].max() * 0.88,
-        text="<b>💎 HIDDEN GEMS</b><br>High Growth Potential",
-        showarrow=False,
-        font=dict(color="#D97706", size=11)
-    )
+    # Quadrant captions pinned to the plot corners (paper coords: never collide with data scale)
+    for (px_, py_, xa, ya, txt, col) in [
+        (0.99, 0.99, "right", "top", "<b>ดาวเด่น</b>  Yield สูง / โตสูง", COLOR_CORAL),
+        (0.01, 0.99, "left", "top", "<b>เพชรเม็ดงาม</b>  Yield ต่ำ / โตสูง", "#D97706"),
+        (0.99, 0.01, "right", "bottom", "<b>รายได้หลัก</b>  Yield สูง / โตต่ำ", COLOR_TEAL),
+        (0.01, 0.01, "left", "bottom", "<b>ต้องยกระดับ</b>  Yield ต่ำ / โตต่ำ", "#64748B"),
+    ]:
+        fig.add_annotation(xref="paper", yref="paper", x=px_, y=py_, xanchor=xa, yanchor=ya, text=txt,
+                           showarrow=False, font=dict(color=col, size=12), bgcolor="rgba(255,255,255,0.75)",
+                           borderpad=3)
+
+    # Label only the 8 largest provinces so text never piles up
+    top = df.nlargest(8, "total_revenue")
+    fig.add_trace(go.Scatter(x=top["revenue_per_visitor"], y=top["revenue_yoy_growth"], mode="text",
+                             text=top["province_name_th"], textposition="top center",
+                             textfont=dict(size=11, color=COLOR_DARK), showlegend=False, hoverinfo="skip"))
 
     fig.update_layout(
         **CHART_THEME,
-        xaxis=dict(title="<b>รายได้เฉลี่ยต่อผู้เยี่ยมเยือน (Yield - บาท/คน)</b>", showgrid=True, gridcolor="#F1F5F9"),
-        yaxis=dict(title="<b>อัตราการเติบโตของรายได้ (YoY Revenue Growth - %)</b>", showgrid=True, gridcolor="#F1F5F9"),
-        legend=dict(title=dict(text="<b>กลุ่มยุทธศาสตร์</b>"), orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
+        height=620,
+        xaxis=dict(title="<b>Yield (บาท/คน)</b>", range=[x0, x1], showgrid=True, gridcolor="#F1F5F9", zeroline=False,
+                   tickformat=",.0f"),
+        yaxis=dict(title="<b>การเติบโตรายได้ YoY (%)</b>", range=[y0, y1], showgrid=True, gridcolor="#F1F5F9",
+                   zeroline=False, ticksuffix="%"),
     )
     return fig
 
+@_chart("ความผิดปกติรายเดือน", 110)
 def create_anomaly_chart(anomaly_df: pd.DataFrame) -> go.Figure:
     """
     Time Series Anomaly Detection with Bollinger Bands.
@@ -581,6 +620,7 @@ def create_anomaly_chart(anomaly_df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
+@_chart("กลุ่มจังหวัด", 110)
 def create_cluster_scatter(clustered_df: pd.DataFrame) -> go.Figure:
     """
     K-Means clustering scatter: Yield vs Dependency Ratio with cluster colors.
@@ -615,4 +655,29 @@ def create_cluster_scatter(clustered_df: pd.DataFrame) -> go.Figure:
         yaxis=dict(title="<b>รายได้เฉลี่ยต่อผู้เยี่ยมเยือน (Yield per Tourist - บาท/คน)</b>", showgrid=True, gridcolor="#F1F5F9"),
         legend=dict(title=dict(text="<b>กลุ่มยุทธศาสตร์</b>"), orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5)
     )
+    return fig
+
+
+@_chart("กลุ่มจังหวัด", 40)
+def create_cluster_profile_chart(clustered_df: pd.DataFrame) -> go.Figure:
+    """Small multiples: one panel per metric, one horizontal bar per cluster (mean value) for easy comparison."""
+    from plotly.subplots import make_subplots
+    cands = {"total_tourists": "นักท่องเที่ยว (คน)", "yield_per_tourist": "Yield (บาท/คน)",
+             "dependency_ratio": "พึ่งพา GPP (%)", "foreign_share_pct": "ต่างชาติ (%)", "occupancy_rate": "เข้าพัก (%)"}
+    cols = [c for c in cands if c in clustered_df.columns]
+    prof = clustered_df.groupby("cluster_label")[cols].mean()
+    sizes = clustered_df.groupby("cluster_label").size()
+    labels = [f"{k.split(' (')[0]} (n={sizes[k]})" for k in prof.index]
+    palette = [COLOR_CORAL, COLOR_TEAL, "#0D9488", COLOR_SAND_DARK]
+    fig = make_subplots(rows=1, cols=len(cols), subplot_titles=[cands[c] for c in cols],
+                        horizontal_spacing=0.04, shared_yaxes=True)
+    for i, c in enumerate(cols, 1):
+        fig.add_trace(go.Bar(x=prof[c], y=labels, orientation="h", showlegend=False,
+                             marker_color=[palette[j % len(palette)] for j in range(len(labels))],
+                             text=[f"{v:,.0f}" if v >= 100 else f"{v:,.1f}" for v in prof[c]],
+                             textposition="outside", cliponaxis=False,
+                             hovertemplate="%{y}<br>" + cands[c] + ": %{x:,.1f}<extra></extra>"), row=1, col=i)
+        fig.update_xaxes(showticklabels=False, showgrid=False, range=[0, float(prof[c].max()) * 1.4 or 1], row=1, col=i)
+    fig.update_annotations(font=dict(size=12, color=COLOR_DARK))
+    fig.update_layout(**CHART_THEME, height=420)
     return fig

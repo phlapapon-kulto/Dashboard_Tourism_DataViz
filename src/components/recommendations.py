@@ -5,8 +5,10 @@ Calculated dynamically from real dashboard visitor data.
 """
 
 from typing import Dict, Any, List
+from collections import Counter
+from html import escape
+from urllib.parse import quote
 import pandas as pd
-import streamlit as st
 
 # Curated metadata dictionary for Thai tourism destinations
 DESTINATION_CATALOG: Dict[str, Dict[str, Any]] = {
@@ -194,35 +196,103 @@ DESTINATION_CATALOG: Dict[str, Dict[str, Any]] = {
     }
 }
 
-# Fallback generator for other provinces
+# Additional provinces. image_url is empty on purpose: paste image_url + image_credit from: python tools/commons_images.py pick "File:..."
+# NOTE: attraction/why_visit text below is a draft - please review it before publishing.
+DESTINATION_CATALOG.update({
+    "อ่างทอง": {
+        "en_name": "Ang Thong", "image_url": "", "image_credit": "",
+        "attractions": ["วัดม่วง (พระพุทธมหานวมินทร์ศากยมุนีศรีวิเศษชัยชาญ พระใหญ่)",
+                        "วัดป่าโมกวรวิหาร (พระนอน)", "วัดขุนอินทประมูล (พระพุทธไสยาสน์ขุนอินทร์)"],
+        "why_visit": "เมืองพระใหญ่ริมแม่น้ำเจ้าพระยา เส้นทางไหว้พระและท่องเที่ยวเชิงวัฒนธรรมใกล้กรุงเทพฯ เหมาะกับทริปวันเดียว",
+        "best_season": "พฤศจิกายน – กุมภาพันธ์ (อากาศเย็น เดินทางสะดวก)",
+        "travel_style": "Merit-Making Trail, Cultural Day-Trip"
+    },
+    "สิงห์บุรี": {
+        "en_name": "Sing Buri", "image_url": "", "image_credit": "",
+        "attractions": ["อนุสาวรีย์วีรชนค่ายบางระจัน", "พิพิธภัณฑ์ค่ายบางระจัน",
+                        "วัดพระนอนจักรสีห์วรวิหาร"],
+        "why_visit": "เมืองแห่งวีรกรรมค่ายบางระจัน ประวัติศาสตร์สมัยอยุธยาตอนปลาย บรรยากาศสงบริมแม่น้ำเจ้าพระยา",
+        "best_season": "พฤศจิกายน – กุมภาพันธ์ (อากาศไม่ร้อน)",
+        "travel_style": "Historical Heritage, Cultural Day-Trip"
+    },
+    "สระบุรี": {
+        "en_name": "Saraburi", "image_url": "", "image_credit": "",
+        "attractions": ["วัดพระพุทธบาทราชวรมหาวิหาร", "อุทยานแห่งชาติน้ำตกเจ็ดคด-โป่งก้อนเส้า",
+                        "วัดถ้ำพระโพธิสัตว์"],
+        "why_visit": "ประตูสู่ภาคอีสานและภาคเหนือ แหล่งแสวงบุญสำคัญ พร้อมธรรมชาติน้ำตกและถ้ำใกล้กรุงเทพฯ",
+        "best_season": "พฤศจิกายน – กุมภาพันธ์ (อากาศเย็น เหมาะเที่ยววัดและธรรมชาติ)",
+        "travel_style": "Merit-Making, Nature Escape, Cave Exploration"
+    },
+    "แพร่": {
+        "en_name": "Phrae", "image_url": "", "image_credit": "",
+        "attractions": ["แพะเมืองผี", "พระธาตุช่อแฮ", "คุ้มเจ้าหลวงเมืองแพร่"],
+        "why_visit": "เมืองรองสโลว์ไลฟ์ภาคเหนือ ขึ้นชื่อเรื่องผ้าหม้อห้อม บ้านไม้สักโบราณ และธรรมชาติเสาดินนาน้อย",
+        "best_season": "พฤศจิกายน – กุมภาพันธ์ (อากาศหนาวเย็น)",
+        "travel_style": "Slow Life, Heritage, Craft Community"
+    },
+})
+
+# ---------------------------------------------------------------------------
+# Image integrity: a photo may only represent the ONE province that owns its URL.
+# Any URL shared by several provinces (or missing) is replaced by a neutral labelled
+# placeholder instead of a photo of a different place. Run tools/audit_images.py to review.
+# ---------------------------------------------------------------------------
+_URL_COUNT = Counter(m["image_url"] for m in DESTINATION_CATALOG.values())
+_URL_OWNER: Dict[str, str] = {}
+for _name, _m in DESTINATION_CATALOG.items():
+    _URL_OWNER.setdefault(_m["image_url"], _name)
+
+PLACEHOLDER_CREDIT = "ภาพประกอบ (ยังไม่มีภาพถ่ายจริงของจังหวัดนี้)"
+
+
+def make_placeholder_image(label_th: str, label_en: str = "") -> str:
+    """Neutral teal gradient card with the province name (SVG data URI, 16:10)."""
+    label_th, label_en = escape(label_th), escape(label_en)
+    svg = (
+        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500'>"
+        "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>"
+        "<stop offset='0' stop-color='#0F766E'/><stop offset='1' stop-color='#134E4A'/></linearGradient></defs>"
+        "<rect width='800' height='500' fill='url(#g)'/>"
+        f"<text x='400' y='250' text-anchor='middle' font-size='56' font-weight='700' fill='#F5E6CA' "
+        f"font-family='IBM Plex Sans Thai, Noto Sans Thai, sans-serif'>{label_th}</text>"
+        f"<text x='400' y='310' text-anchor='middle' font-size='28' fill='#FFFFFF' "
+        f"font-family='IBM Plex Sans Thai, Noto Sans Thai, sans-serif'>{label_en}</text></svg>"
+    )
+    return "data:image/svg+xml;charset=utf-8," + quote(svg)
+
+
+def resolve_image(province_th: str, province_en: str, url: str) -> Dict[str, Any]:
+    """Return the photo only if this province is the first (owning) province of that URL; else a placeholder."""
+    if url and _URL_OWNER.get(url) == province_th:
+        return {"image_url": url, "placeholder": False}
+    return {"image_url": make_placeholder_image(province_th, province_en), "placeholder": True}
+
+
 def get_province_destination_meta(province_name_th: str, province_name_en: str, region: str) -> Dict[str, Any]:
     if province_name_th in DESTINATION_CATALOG:
-        return DESTINATION_CATALOG[province_name_th]
-    
-    # Regional generic fallbacks
-    regional_images = {
-        "ภาคเหนือ": "https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=800&q=80",
-        "ภาคใต้": "https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?auto=format&fit=crop&w=800&q=80",
-        "ภาคกลาง": "https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=800&q=80",
-        "ภาคตะวันออก": "https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=800&q=80",
-        "ภาคตะวันตก": "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=800&q=80",
-        "ภาคตะวันออกเฉียงเหนือ": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=800&q=80"
-    }
-    
+        meta = dict(DESTINATION_CATALOG[province_name_th])
+        img = resolve_image(province_name_th, meta.get("en_name", province_name_en), meta["image_url"])
+        meta["image_url"] = img["image_url"]
+        if img["placeholder"]:
+            meta["image_credit"] = PLACEHOLDER_CREDIT
+        return meta
+
+    # Provinces without a curated entry: never borrow another province's photo
     return {
         "en_name": province_name_en,
-        "image_url": regional_images.get(region, "https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=800&q=80"),
-        "image_credit": f"Unsplash / Tourism Authority of Thailand ({region})",
+        "image_url": make_placeholder_image(province_name_th, province_name_en),
+        "image_credit": PLACEHOLDER_CREDIT,
         "attractions": [
             f"อุทยานแห่งชาติและจุดชมวิวธรรมชาติประจำจังหวัด{province_name_th}",
             f"วัดพระอารามหลวงและศูนย์รวมจิตใจชาว{province_name_th}",
-            f"ตลาดวัฒนธรรมและถนนคนเดินท้องถิ่น",
-            f"ชุมชนท่องเที่ยวเชิงเกษตรและภูมิปัญญาท้องถิ่น"
+            "ตลาดวัฒนธรรมและถนนคนเดินท้องถิ่น",
+            "ชุมชนท่องเที่ยวเชิงเกษตรและภูมิปัญญาท้องถิ่น"
         ],
         "why_visit": f"สัมผัสเอกลักษณ์วิถีชีวิต ศิลปวัฒนธรรมท้องถิ่น และความงดงามทางธรรมชาติของ{province_name_th} ({region}) ปลายทางเมืองน่าเที่ยวที่รอให้ค้นหา",
         "best_season": "พฤศจิกายน – กุมภาพันธ์ (ช่วงฤดูท่องเที่ยวของไทย)",
         "travel_style": "Local Life, Nature Discovery, Culture, Community Tourism"
     }
+
 
 def get_top5_recommended_provinces(df_filtered: pd.DataFrame) -> List[Dict[str, Any]]:
     """
