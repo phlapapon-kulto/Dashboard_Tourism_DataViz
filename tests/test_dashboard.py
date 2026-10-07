@@ -108,5 +108,19 @@ class TestThailandTourismDashboard(unittest.TestCase):
         fig7 = create_occupancy_bar_chart(sub_df)
         self.assertIsNotNone(fig7)
 
+    def test_travel_recommendations(self):
+        """Verify dynamic Top 5 province calculation strictly from data"""
+        from src.components.recommendations import get_top5_recommended_provinces
+        sub_df = self.fact_tourism[self.fact_tourism["year"] == 2024]
+        top5 = get_top5_recommended_provinces(sub_df)
+        self.assertEqual(len(top5), 5, "Should return exactly 5 provinces")
+        
+        # Verify rank order is descending
+        for i in range(len(top5) - 1):
+            self.assertGreaterEqual(top5[i]["total_tourists"], top5[i+1]["total_tourists"])
+            self.assertEqual(top5[i]["rank"], i + 1)
+            self.assertTrue(len(top5[i]["meta"]["attractions"]) > 0)
+            self.assertTrue(len(top5[i]["meta"]["image_url"]) > 0)
+
 if __name__ == "__main__":
     unittest.main()
