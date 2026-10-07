@@ -4,6 +4,7 @@
 
 ---
 
+link : https://dashboardtourismdataviz-8ojdjesxhrokn7twnoygsf.streamlit.app/
 ## 📌 1. ภาพรวมโครงการ (Project Overview)
 
 **Thailand Tourism Intelligence Dashboard** ได้รับการออกแบบและพัฒนาขึ้นเพื่อเป็นเครื่องมือกลางสำหรับผู้กำหนดนโยบาย (Policymakers), นักวิเคราะห์เศรษฐกิจ (Economic Analysts) และผู้ประกอบการท่องเที่ยว เพื่อตอบโจทย์คำถามสำคัญเชิงยุทธศาสตร์ด้านการท่องเที่ยวของประเทศไทย ผ่านการรวบรวม วิเคราะห์ และแสดงผลข้อมูลเชิงโต้ตอบ (Interactive Data Visualization)
