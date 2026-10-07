@@ -68,8 +68,8 @@ DESTINATION_CATALOG: Dict[str, Dict[str, Any]] = {
     },
     "กาญจนบุรี": {
         "en_name": "Kanchanaburi",
-        "image_url": "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=800&q=80",
-        "image_credit": "Unsplash / TAT Kanchanaburi",
+        "image_url": "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80",
+        "image_credit": "Unsplash / Erawan & River Kwai",
         "attractions": [
             "สะพานข้ามแม่น้ำแคว & ทางรถไฟสายมรณะ",
             "น้ำตกเอราวัณ 7 ชั้น มรกตแห่งผืนป่าตะวันตก",
@@ -97,7 +97,7 @@ DESTINATION_CATALOG: Dict[str, Dict[str, Any]] = {
     "กระบี่": {
         "en_name": "Krabi",
         "image_url": "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&w=800&q=80",
-        "image_credit": "Unsplash / TAT Krabi",
+        "image_credit": "Unsplash / Railay Beach Krabi",
         "attractions": [
             "อ่าวไร่เลย์ & หาดถ้ำพระนาง (ผาหินปูนปีนผาระดับโลก)",
             "หมู่เกาะพีพี (เกาะพีพีดอน & อ่าวมาหยา)",
@@ -111,7 +111,7 @@ DESTINATION_CATALOG: Dict[str, Dict[str, Any]] = {
     "นครราชสีมา": {
         "en_name": "Nakhon Ratchasima (Khao Yai)",
         "image_url": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=800&q=80",
-        "image_credit": "Unsplash / TAT Nakhon Ratchasima",
+        "image_credit": "Unsplash / Khao Yai National Park",
         "attractions": [
             "อุทยานแห่งชาติเขาใหญ่ (มรดกโลกดงพญาเย็น-เขาใหญ่)",
             "อุทยานประวัติศาสตร์พิมาย (ปราสาทหินขอมโบราณ)",
@@ -124,8 +124,8 @@ DESTINATION_CATALOG: Dict[str, Dict[str, Any]] = {
     },
     "สงขลา": {
         "en_name": "Songkhla (Hat Yai)",
-        "image_url": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
-        "image_credit": "Unsplash / TAT Songkhla",
+        "image_url": "https://images.unsplash.com/photo-1565008447742-97f6f38c985c?auto=format&fit=crop&w=800&q=80",
+        "image_credit": "Unsplash / Songkhla Heritage",
         "attractions": [
             "หาดสมิหลา & รูปปั้นนางเงือกทอง",
             "ย่านเมืองเก่าสงขลา ถนนนางงาม (Street Art)",
